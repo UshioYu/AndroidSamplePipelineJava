@@ -6,7 +6,12 @@ pipeline{
     stages{
         stage('安卓程序源码同步') {
             steps {
-                bat 'mkdir AndroidSampleApp'
+                bat '''
+                    if exist "AndroidSampleApp" (
+                      rd /s /q AndroidSampleApp
+                    )
+                    mkdir AndroidSampleApp
+                '''
                 dir("AndroidSampleApp"){
                     git branch:'master', url:'git@github.com:UshioYu/AndroidSampleApp.git'
                 }
@@ -28,7 +33,7 @@ pipeline{
                 bat '''
                     cd AndroidSampleApp
                     set pwd=%cd%
-                    set apk=%pwd%\app\build\outputs\apk\debug\app-debug.apk
+                    set apk=%pwd%/app/build/outputs/apk/debug/app-debug.apk
                     adb uninstall com.appsflyer.androidsampleapp
                     adb install %apk%
                 '''
@@ -37,7 +42,12 @@ pipeline{
 
         stage('自动测试程序源码同步') {
             steps {
-                bat 'mkdir iAppBVT'
+                bat '''
+                    if exist "iAppBVT" (
+                      rd /s /q iAppBVT
+                    )
+                    mkdir iAppBVT
+                '''
                 dir("iAppBVT"){
                     git branch:'master', url:'git@github.com:UshioYu/iAppBVT.git'
                 }
@@ -48,7 +58,7 @@ pipeline{
             steps {
                 bat '''
                     cd iAppBVT
-                    mvn clean install -Dtest=AppsFlyerBVT
+                    mvn clean install
                 '''
             }
         }
@@ -61,7 +71,10 @@ pipeline{
 
         stage('通知邮件') {
             steps {
-                emailext body: '$DEFAULT_CONTENT', recipientProviders: [[$class: 'RequesterRecipientProvider']], subject: '$DEFAULT_SUBJECT'
+                emailext subject: '$DEFAULT_SUBJECT',
+                body: '$DEFAULT_CONTENTS',
+                to: '$DEFAULT_RECIPIENTS',
+                attachmentsPattern: 'AndroidSampleApp/app/build/outputs/apk/debug/app-debug.apk'
             }
         }
     }

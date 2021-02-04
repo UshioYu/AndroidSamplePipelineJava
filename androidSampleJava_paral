@@ -1,6 +1,6 @@
 pipeline{
     agent {
-        label 'master'
+        label 'slavor_ium'
     }
 
     stages{
@@ -8,18 +8,28 @@ pipeline{
             parallel {
                 stage('安卓程序源码') {
                     steps {
-                        sh 'mkdir -p AndroidSampleApp'
+                        bat '''
+                            if exist "AndroidSampleApp" (
+                               rd /s /q AndroidSampleApp
+                            )
+                            mkdir AndroidSampleApp
+                        '''
                         dir("AndroidSampleApp"){
-                            git branch:'master', url:'git@github.com:princeqjzh/AndroidSampleApp.git'
+                            git branch:'master', url:'git@github.com:UshioYu/AndroidSampleApp.git'
                         }
                     }
                 }
 
                 stage('自动测试程序源码') {
                     steps {
-                        sh 'mkdir -p iAppBVT'
+                        bat '''
+                            if exist "iAppBVT" (
+                               rd /s /q iAppBVT
+                            )
+                            mkdir iAppBVT
+                            '''
                         dir("iAppBVT"){
-                            git branch:'master', url:'git@github.com:princeqjzh/iAppBVT.git'
+                            git branch:'master', url:'git@github.com:UshioYu/iAppBVT.git'
                         }
                     }
                 }
@@ -28,10 +38,9 @@ pipeline{
 
         stage('安卓编译打包') {
             steps {
-                sh '''
-                    . ~/.bash_profile
+                bat '''
                     cd AndroidSampleApp
-                    sh gradlew clean assembleDebug
+                    gradlew clean assembleDebug
                 '''
             }
         }
@@ -48,32 +57,21 @@ pipeline{
                     stages{
                         stage('部署') {
                             steps {
-                                sh '''
-                                    . ~/.bash_profile
+                                bat '''
                                     cd AndroidSampleApp
-                                    apk=app/build/outputs/apk/debug/app-debug.apk
-                                    {
-                                        #try: 卸载现有的安卓app
-                                        adb uninstall com.appsflyer.androidsampleapp
-                                    } || {
-                                        #catch
-                                        echo 'no com.appsflyer.androidsampleapp package'
-                                    }
-                                    sleep 5
-
-                                    #安装安卓app
-                                    adb install $apk
+                                    set pwd=%cd%
+                                    set apk=%pwd%/app/build/outputs/apk/debug/app-debug.apk
+                                    adb uninstall com.appsflyer.androidsampleapp
+                                    adb install %apk%
                                 '''
                             }
                         }
 
                         stage('自动测试') {
                             steps {
-                                sh '''
-                                    . ~/.bash_profile
-
+                                bat '''
                                     cd iAppBVT
-                                    mvn clean install -Dtest=AppsFlyerBVT
+                                    mvn clean install
                                 '''
                             }
                         }
@@ -84,7 +82,10 @@ pipeline{
 
         stage('通知邮件') {
             steps {
-                emailext body: '$DEFAULT_CONTENT', recipientProviders: [[$class: 'RequesterRecipientProvider']], subject: '$DEFAULT_SUBJECT'
+                emailext subject: '$DEFAULT_SUBJECT',
+                body: '$DEFAULT_CONTENTS',
+                to: '$DEFAULT_RECIPIENTS',
+                attachmentsPattern: 'AndroidSampleApp/app/build/outputs/apk/debug/app-debug.apk'
             }
         }
     }

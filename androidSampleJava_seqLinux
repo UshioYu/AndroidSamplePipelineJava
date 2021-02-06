@@ -1,6 +1,6 @@
 pipeline{
     agent {
-        //测试jenkins的自动化构建（代码提交即触发）
+        #测试jenkins的自动化构建（代码提交即触发）
         label 'slavor_linux'
     }
 

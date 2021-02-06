@@ -16,7 +16,7 @@ pipeline{
         stage('安卓编译打包') {
             steps {
                 sh '''
-                     #测试jenkins的自动化构建（代码提交即触发）
+                     #测试jenkins的自动化构建 代码提交即触发
                      source /etc/profile
                      cd AndroidSampleApp
                      sh gradlew clean assembleDebug
